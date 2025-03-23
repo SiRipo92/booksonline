@@ -1,22 +1,19 @@
-from bs4 import BeautifulSoup # To extract, parse and modify HTML
-import requests # To make the HTTP request to the product page
-import re # To match and remove expressions to extract the number, ex. in availability "(22 are available)
-import csv # To place file in CSV format
-from urllib.parse import urljoin  # for the image urls to find their relative paths
+from bs4 import BeautifulSoup
+import requests
+import re
+import csv
+from urllib.parse import urljoin
 
-# Constants
-product_url = "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000"
 
-## Phase 2: Make these functions we can export to scrape the products
 def scrape_product(url):
     """
-    Given a product URL, scrape the product data and return it as a dictionary
+    Given a product URL, scrape the product data and return it as a dictionary.
     """
-    page = requests.get(product_url)
+    page = requests.get(url)
     soup = BeautifulSoup(page.content, "html.parser")
 
     # 1. Get the product_page_url
-    product_page_url = product_url
+    product_page_url = url
 
     # 2. Get the product title
     product_title = soup.find("h1").text
@@ -70,7 +67,7 @@ def scrape_product(url):
     # 8. Image URL (convert relative URL to absolute)
     product_image = soup.find("div", class_="carousel-inner")
     relative_image_url = product_image.find("img").get("src")
-    image_url = urljoin(product_url, relative_image_url)
+    image_url = urljoin(url, relative_image_url)
 
     # Combine all product information into a dictionary
     product_info = {

@@ -1,5 +1,7 @@
+# Ignore env/ folder and .idea/ base folders
 env/
 .idea
 
+# Ignore assets directory and any files with .csv extensions
 *.csv
-*/*.csv
+*/assets/*

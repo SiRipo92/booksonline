@@ -4,23 +4,25 @@ import re
 import csv
 from urllib.parse import urljoin
 
-
-def scrape_product(url):
+def scrape_book(url):
     """
     Given a product URL, scrape the product data and return it as a dictionary.
+    Input a book page url - if it's able to recover the URL then ... if not ?
+    Try to recover data we need, transform it, and store it in variables
+    Output a dictionary product_info
     """
-    page = requests.get(url)
-    soup = BeautifulSoup(page.content, "html.parser")
+    book_page = requests.get(url)
+    soup = BeautifulSoup(book_page.content, "html.parser")
 
     # 1. Get the product_page_url
-    product_page_url = url
+    book_page_url = url
 
     # 2. Get the product title
     product_title = soup.find("h1").text
 
     # 3. Get the product's description
-    product_description_paragraphs = soup.find_all("p")
-    product_description = product_description_paragraphs[-1].text
+    book_description_paragraphs = soup.find_all("p")
+    book_description = book_description_paragraphs[-1].text
 
     # 4. Extract availability into a number format
     availability_text = soup.find("p", class_="instock availability").get_text(strip=True)
@@ -45,7 +47,7 @@ def scrape_product(url):
         if cls != "star-rating":
             review_rating = rating_map.get(cls, "0/5")
 
-    # 6. Get the product table's characteristics
+    # 6a. Get the product table's characteristics
     table = soup.find("table", class_="table table-striped")
     table_data = {}
     for row in table.find_all("tr"):
@@ -54,7 +56,7 @@ def scrape_product(url):
         if header and data:
             table_data[header] = data
 
-    # Recover specific data
+    ## 6b. Recover specific data (UPC, prices with and without taxes)
     universal_product_code = table_data.get("UPC")
     price_including_tax = table_data.get("Price (incl. tax)")
     price_excluding_tax = table_data.get("Price (excl. tax)")
@@ -65,29 +67,32 @@ def scrape_product(url):
     category = breadcrumb_items[2].get_text(strip=True) if len(breadcrumb_items) >= 3 else None
 
     # 8. Image URL (convert relative URL to absolute)
-    product_image = soup.find("div", class_="carousel-inner")
-    relative_image_url = product_image.find("img").get("src")
+    book_image = soup.find("div", class_="carousel-inner")
+    relative_image_url = book_image.find("img").get("src")
     image_url = urljoin(url, relative_image_url)
 
     # Combine all product information into a dictionary
-    product_info = {
-        "product_page_url": product_page_url,
+    book_info = {
+        "product_page_url": book_page_url,
         "universal_product_code": universal_product_code,
         "title": product_title,
         "price_including_tax": price_including_tax,
         "price_excluding_tax": price_excluding_tax,
         "number_available": number_available,
-        "product_description": product_description,
+        "product_description": book_description,
         "category": category,
         "review_rating": review_rating,
         "image_url": image_url,
     }
-    return product_info
+    return book_info
 
 
-def write_csv(product_info, csv_filename):
+def write_csv(book_info, csv_filename):
     """
-    Given a product_info dictionary and a CSV filename, write the data to CSV.
+    Inputs : Takes in a parameter of a book_info dictionary 'book_info' created from the scrape_book()function
+
+    Outputs a CSV file 'book_data.csv' (product_info. of dictionary using the book_info dictionary keys as columns
+    and their values in rows
     """
     columns = [
         "product_page_url",
@@ -101,7 +106,10 @@ def write_csv(product_info, csv_filename):
         "review_rating",
         "image_url",
     ]
-    with open(csv_filename, "w", newline="", encoding="utf-8") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=columns)
+    csv_filename = "book_data.csv"
+    with open(csv_filename, "w", newline="", encoding="utf-8") as bookCsvFile:
+        writer = csv.DictWriter(bookCsvFile,fieldnames=columns)
         writer.writeheader()
-        writer.writerow(product_info)
+        writer.writerow(book_info)
+
+    print(f"The ${csv_filename} has been written")

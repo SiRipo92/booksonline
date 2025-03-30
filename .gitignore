@@ -5,3 +5,7 @@ env/
 # Ignore assets directory and any files with .csv extensions
 *.csv
 */assets/*
+
+
+# Notebooks
+*/notebooks/P2/*

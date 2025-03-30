@@ -8,4 +8,5 @@ env/
 
 
 # Notebooks
-notebooks/
+notebooks/*
+

@@ -6,10 +6,9 @@ from urllib.parse import urljoin
 
 def scrape_book(url):
     """
-    Given a product URL, scrape the product data and return it as a dictionary.
-    Input a book page url - if it's able to recover the URL then ... if not ?
+    Inputs a book page url - if it's able to recover the URL then ... if not ?
     Try to recover data we need, transform it, and store it in variables
-    Output a dictionary product_info
+    Output a dictionary 'book_info'
     """
     book_page = requests.get(url)
     soup = BeautifulSoup(book_page.content, "html.parser")
@@ -87,7 +86,7 @@ def scrape_book(url):
     return book_info
 
 
-def write_csv(book_info, csv_filename):
+def write_csv(book_info, book_csv_file):
     """
     Inputs : Takes in a parameter of a book_info dictionary 'book_info' created from the scrape_book()function
 
@@ -106,10 +105,10 @@ def write_csv(book_info, csv_filename):
         "review_rating",
         "image_url",
     ]
-    csv_filename = "book_data.csv"
-    with open(csv_filename, "w", newline="", encoding="utf-8") as bookCsvFile:
-        writer = csv.DictWriter(bookCsvFile,fieldnames=columns)
+    book_csv_filename = "assets/csv/book_data.csv"
+    with open(book_csv_filename, "w", newline="", encoding="utf-8") as book_csv_file:
+        writer = csv.DictWriter(book_csv_file,fieldnames=columns)
         writer.writeheader()
         writer.writerow(book_info)
 
-    print(f"The ${csv_filename} has been written")
+    print(f"The {book_csv_filename} has been written")

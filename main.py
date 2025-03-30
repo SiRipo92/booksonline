@@ -6,9 +6,9 @@ def main():
     product_info = scrape_book(url)
 
 
-    csv_filename = "book_data.csv"
-    write_csv(product_info, csv_filename)
-    print(f"Data has been written to {csv_filename}")
+    book_csv_file = "/assets/csv/book_data.csv"
+    write_csv(product_info, book_csv_file)
+    print(f"Data has been written to {book_csv_file}")
 
 
 if __name__ == "__main__":

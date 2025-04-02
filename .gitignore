@@ -10,7 +10,7 @@ __pycache__/
 # Ignore assets directory and any files with .csv extensions
 *.csv
 *.jpg
-assets/*
+assets/
 
 
 # Notebooks

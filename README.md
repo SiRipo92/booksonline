@@ -70,7 +70,7 @@ Développer un scraper capable de :
 
 ### Prérequis
 
-- **Python 3.12** (vérifiez avec `python3 --version`)
+- **Python 3.12**
 - **Git** pour le contrôle de version
 
 ### Installation des Dépendances

@@ -1,5 +1,4 @@
 import os
-
 from bs4 import BeautifulSoup
 import requests
 import re
@@ -15,7 +14,6 @@ def scrape_book(url):
 
     try:
         book_page = requests.get(url)
-        # If error in HTTP response raise HTTPError
         book_page.raise_for_status()
 
         if not book_page.content:
@@ -31,9 +29,9 @@ def scrape_book(url):
     # 2. Get the book's title
     try:
         h1_tag = soup.find('h1')
-        book_title = h1_tag.get_text(strip=True) if h1_tag else "Title not found"
+        book_title = h1_tag.get_text(strip=True) if h1_tag else None
     except Exception as e:
-        book_title = "Error extracting title"
+        book_title = None
         print(f"Error extracting title: {e}")
 
     # 3. Get the book's description
@@ -46,16 +44,16 @@ def scrape_book(url):
             if description_paragraph:
                 book_description = description_paragraph.get_text(strip=True)
             else:
-                book_description = "Description not found"
+                print(f"No description found for {url}.")
         else:
-            book_description = "Description not found."
+            print(f"No description parent element was found")
     except Exception as e:
-        book_description = "Error extracting description"
+        book_description = None
         print(f"Error extracting description: {e}")
 
     # 4. Extract book's availability into an int
     try:
-        availability_tag = soup.find("p", class_="instock availability")
+        availability_tag = soup.find("p", class_="availability")
         if availability_tag:
             availability_text = availability_tag.get_text(strip=True)
             match = re.search(r'\((\d+)\s+available\)', availability_text)
@@ -91,13 +89,13 @@ def scrape_book(url):
 
     # 6a. Get the product table's characteristics
     try:
-        table = soup.find("table", class_="table table-striped")
+        table = soup.find("table", class_="table")
         table_data = {}
         if table:
             rows = table.find_all("tr")
             for row in rows:
-                header = row.find("th").get_text(strip=True) if row.find("th") else "Not found"
-                data = row.find("td").get_text(strip=True) if row.find("td") else "Not found"
+                header = row.find("th").get_text(strip=True) if row.find("th") else None
+                data = row.find("td").get_text(strip=True) if row.find("td") else None
                 if header:
                     table_data[header] = data
         else:
@@ -107,18 +105,18 @@ def scrape_book(url):
         print(f"Error extracting table: {e}")
 
     ## 6b. Recover specific data (UPC, prices with and without taxes)
-    universal_product_code = table_data.get("UPC", "Not found")
-    price_including_tax = table_data.get("Price (incl. tax)", "Not found")
-    price_excluding_tax = table_data.get("Price (excl. tax)", "Not found")
+    universal_product_code = table_data.get("UPC", None)
+    price_including_tax = table_data.get("Price (incl. tax)", None)
+    price_excluding_tax = table_data.get("Price (excl. tax)", None)
 
     # 7. Category (from breadcrumb)
     try:
         breadcrumb_list = soup.find("ul", class_="breadcrumb")
         if breadcrumb_list:
             breadcrumb_items = breadcrumb_list.find_all("li")
-            book_category = breadcrumb_items[2].get_text(strip=True) if len(breadcrumb_items) >= 3 else "Not found"
+            book_category = breadcrumb_items[2].get_text(strip=True) if len(breadcrumb_items) >= 3 else None
         else:
-            book_category = "Not found"
+            print(f"Book category was not found in breadcrumb list : {breadcrumb_list}")
     except Exception as e:
         print(f"Error extracting category: {e}")
 
@@ -138,13 +136,13 @@ def scrape_book(url):
                     base_url = "https://books.toscrape.com/"
                     image_url = urljoin(base_url, relative_image_url)
                 else:
-                    image_url = "Image tag not found"
+                    image_url = None
             else:
-                image_url = "Active item not found"
+                image_url = None
         else:
-            image_url = "Image container not found"
+            image_url = None
     except Exception as e:
-        image_url = ""
+        image_url = None
         print(f"Error extracting image URL: {e}")
 
     # Combine all product information into a dictionary
@@ -162,12 +160,15 @@ def scrape_book(url):
     }
     return book_info
 
+
 def write_csv(book_info, file_path):
     """
-    Inputs : Takes in a parameter of a book_info dictionary, which is created from the scrape_book()function
+    Input: Takes in a book_info dictionary (from scrape_book()) and writes it to a CSV file.
 
-    Outputs a CSV file 'book_data.csv' (book_info. of dictionary using the book_info dictionary keys as columns
-    and their values in rows
+    Output: If an entry with the same universal_product_code already exists:
+      - If data has changed, update that entry.
+      - If data is the same, do nothing.
+    Otherwise, a new row is appended.
     """
     columns = [
         "product_page_url",
@@ -181,25 +182,52 @@ def write_csv(book_info, file_path):
         "review_rating",
         "image_url",
     ]
+    file_path = "assets/csv/book_data.csv"
+    # Unique key used to detect duplicates
+    unique_key = "universal_product_code"
 
+    existing_rows = []
     file_exists = os.path.exists(file_path)
 
-    try:
-        with open(file_path, "a", newline="", encoding="utf-8") as csv_file:
-            writer = csv.DictWriter(csv_file, fieldnames=columns)
-            if not file_exists or os.stat(file_path).st_size == 0:
-                writer.writeheader()
-                print("CSV file created and header written")
-            else:
-                print("CSV file already exists; appending data.")
+    if file_exists:
+        with open(file_path, "r", newline="", encoding="utf-8") as csv_file:
+            try:
+                csv_reader = csv.DictReader(csv_file)
+                for row in csv_reader:
+                    existing_rows.append(row)
+            except:
+                print(f"Error reading CSV file: {file_path}")
+                existing_rows = []
 
-            # Debug prints:
-            print("Debug: book_info about to be written ->", book_info)
-            writer.writerow(book_info)
+    # Look for duplicate entry using the unique key
+    duplicate_found = False
+    updated = False
+    for index, row in enumerate(existing_rows):
+        if row.get(unique_key) == book_info.get(unique_key):
+            duplicate_found = True
+            # Check if there's been a change in data
+            if row != book_info:
+                existing_rows[index] = book_info
+                updated = True
+            break
 
-    except PermissionError as e:
-        print(f"Permission error while writing to CSV file: {e}")
-    except Exception as e:
-        print(f"Error writing to CSV file: {e}")
+    if duplicate_found:
+        if updated:
+            print("Duplicate entry found; data updated.")
+        else:
+            print("Duplicate entry found: no changes made.")
+            return
     else:
-        print(f"Data successfully written to CSV file: {file_path}")
+        # Append the new entry if no duplicate is found
+        existing_rows.append(book_info)
+        print("New entry added.")
+
+        # Write all rows (new, updated, or existing) to the CSV file
+        try:
+            with open(file_path, "a", newline="", encoding="utf-8") as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=columns)
+                writer.writeheader()
+                writer.writerows(existing_rows)
+            print(f"Data successfully written to CSV file: {file_path}")
+        except Exception as e:
+            print(f"Error writing to CSV file: {e}")

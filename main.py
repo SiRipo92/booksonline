@@ -11,34 +11,22 @@ CSV_BASE = os.path.join(ASSETS_BASE, "csv")
 
 def main():
     # Define url for book scraping
-    ## Possible to remove now ?
     book_relative_url = "catalogue/the-past-never-ends_942/index.html"
     url = urljoin(BASE_URL, book_relative_url)
 
     # Create a dictionary of book_info from extracted (scraped) data
-    book_info = scrape_book(url)
-    if not book_info:
-        print(f"Scraping failed. Exiting program")
-        return
+    # book_info = scrape_book(url)
+    # if not book_info:
+        # print(f"Scraping failed. Exiting program")
+        # return
 
     # Define CSV file path for writing
     ## Possible to remove now ?
-    csv_file_path = os.path.join(CSV_BASE, "book_data.csv")
-    abs_csv_path = os.path.abspath(csv_file_path)
-    print(f"Saving csv file to {abs_csv_path}")
-
-    # Obtain Image URL of book for download
-    image_url = book_info["image_url"]
+    # csv_file_path = os.path.join(CSV_BASE, "book_data.csv")
+    # abs_csv_path = os.path.abspath(csv_file_path)
+    # print(f"Saving csv file to {abs_csv_path}")
 
     try:
-        # Write the scraped data to CSV path
-        ## Possible to remove now ?
-        write_csv(book_info, file_path=csv_file_path)
-
-        # Download image to defined path
-        ## Possible to remove now ?
-        download_image(image_url, assets_folder=IMAGES_BASE)
-
         # Create a categories dictionary from category_scraper.py
         # - Keys are the category labels
         # - Values are the urls of the category pages from this list
@@ -46,21 +34,16 @@ def main():
         if not categories:
             print("No categories found.")
             return
-
-        for category_name, category_url in categories.items():
-            print(f"Processing category: {category_name}")
-            total_books, total_pages, book_urls = scrape_category(category_url)
-            print(f"You have found {total_books} books on {total_pages} page(s) in {category_name} category.")
-
-            for book_url in book_urls:
-                print(f"Scraping book: {book_url}")
-                book_info = scrape_book(book_url)
-                if book_info:
-                    write_csv(book_info, file_path=csv_file_path)
-                    download_image(book_info["image_url"], assets_folder=IMAGES_BASE)
-                else:
-                    print(f"Failed to scan the book in {book_url}")
-            print(f"You have processed all (${total_books}) books .")
+        else:
+            print(f"Categories found: {', '.join(categories)}")
+        # Loop over category names and their urls
+            # Scrape the category to obtain total_books, total_pages and book_urls to scan from category_url
+            # Loop through book_urls retrieved from each category page url
+            # For each book found w/ url, scrape that book url into a dictionary book_info
+            # Write csv for each new entry
+            # Download images from each image_url in each book page and set them in assets/images/ folder
+            # If no book_info is found during scraping, print an error message
+            # Else, when the loop finishes, print a message of success with information about the data collected
 
     except Exception as e:
         print(f"An error occurred while processing the data")

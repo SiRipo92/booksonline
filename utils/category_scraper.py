@@ -42,137 +42,64 @@ def generate_categories_list(base_url=BASE_URL):
                 relative_url = a_tag.get("href")
                 category_url = urljoin(base_url, relative_url)
                 categories_dict[category_name] = category_url
+        # Return a categories_dict object where keys are category names and values are their initial URLs
         return categories_dict
     except Exception as e:
         print(f"Error generating categories: {e}")
         return {}
 
-def extract_book_urls(page_url):
+def scrape_category(category_url):
     """
-    Inputs: a category page URL, extracts all book page URLs on that page
-    Outputs: a list of absolute book URLs that can then be scraped and added to csv
+    Inputs a category_url obtained from the function 'generate_categories_list',
+    Collects the total number of books and pages to scrape along and retrieves each book's url
+    Outputs a list of all book URLs to scrape
+    """
+
+    all_book_urls = [] # Initialize an empty list to hold all book urls to scrape
+    current_url = category_url # The landing page of the category is our starting point
+    page_count = 0 # The page_count should be initialized to zero and increased with each 'next' page available
+
+    try:
+        response = requests.get(current_url)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.content, "html.parser")
+    except Exception as e:
+        print(f"Error extracting book URLs from {current_url}: {e}")
+
+    # Retrieve the next page element <li> element with class 'next'
+    next_page = soup.find("li", class_="next")
+
+    # If this element exists, it means there's a link inside so we need to recover the link
+
+    # This function will then call my extract_book_urls(category_page_url) or current-link
+    # To extract book data from each page's articles (a book url)
+    # and create a list of all_book_urls on that page
+
+    # THIS function, scrape_category() will then increase the page count, set the total pages to the total_count
+    # and return the length/total of all_book_urls retrieved
+
+
+def extract_book_urls(category_page_url):
+    """
+    Inputs a category page url obtained from the function 'scrape_category(category_url)'
+    Outputs the scraped book_urls for each article on each page
     """
     try:
-        response = requests.get(page_url)
+        response = requests.get(category_page_url)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, "html.parser")
 
-        book_urls = []
-        # Each book is contained in an <article> with class "product_pod"
-        for article in soup.find_all("article", class_="product-pod"):
-            h3 = article.find("h3"):
+        book_urls = [] # Initialize empty book_urls list
+
+        # Loop through each <article> element with class "product_pod" to extract book_page_url
+        for article in soup.find_all("article", class_="product_pod"):
+            h3 = article.find("h3")
             if h3:
-
-
-def scrape_category(category_url):
-    """
-    Inputs the category page url
-    Outputs scraped/extracted data for:
-      - Total number of books in the category: int count
-      - Total number of pages (max 20 books per page): number of pages visited
-      - all_book_urls: list of absolute book URLs from the category
-      - Each individual book page's url per page (to be used in a loop with my other function scrape_book())
-    """
-
-    all_book_urls = []
-    current_url = category_url
-    page_count = 0
-
-    while True:
-        page_count += 1
-        print(f"Scraping page {page_count} : {current_url}")
-
-        #Extract book URLs on this page
-        page_book_urls = extract_book
-
-    try:
-        response = requests.get(category_url)
-        response.raise_for_status()
+                a_tag = h3.find("a")
+                # Be sure this a_tag exists
+                # Get the absolute url and append the book_urls
+        return book_urls
     except Exception as e:
-        print(f"Error retrieving category page: {e}")
-        return None, None, []
-
-    soup = BeautifulSoup(response.content, "html.parser")
-
-    # Extract total number of books from first <strong> element inside form element's text
-    form = soup.find("form", class_="form-horizontal")
-    if form:
-        first_strong = form.find("strong")
-        try:
-            total_books = int(first_strong.text.strip())
-        except (ValueError, AttributeError):
-            print("Could not extract a valid total number of books.")
-            total_books = None
-    else:
-        print("Could not find the results form on the page.")
-        total_books = None
-
-    if total_books is None:
-        try:
-            article_pods = soup.find_all("article", class_="product-pod")
-            if article_pods:
-                for article_pod in article_pods:
-                    book_url = article_pod.get("a", "href")
-                    total_books += 1
-                    print(total_books, book_url)
-            else:
-                print("Could not find books on page")
-        except Exception as e:
-            print(f"Error extracting total number of books: {e}")
-    else:
-        total_books = []
+        print(f"Error extracting book URLs from {category_page_url}: {e}")
 
 
-    # Calculate total pages, assuming 20 books per page.
-    total_pages = math.ceil(total_books / 20)
-
-    # Retrieve all paginated page URLs.
-    book_urls = []
-    current_url = category_url
-    while True:
-        book_urls.append(current_url)
-        next_li = soup.find("li", class_="next")
-        if next_li:
-            next_a = next_li.find("a")
-            if next_a:
-                next_href = next_a.get("href")
-                # Use urljoin to compute the next page's absolute URL.
-                current_url = urljoin(current_url, next_href)
-                # Fetch new page content for further checking.
-                response = requests.get(current_url)
-                response.raise_for_status()
-                soup = BeautifulSoup(response.content, "html.parser")
-            else:
-                break
-        else:
-            break
-
-    return total_books, total_pages, book_urls
-
-def scrape_category_pages(category_url, book_urls, current_url, total_books, total_pages ):
-    """
-    Inputs: Given a list of categories, a list of category page urls, and a list of book page urls,
-    Outputs: the function loops through all the links to read/write the book_data.csv file for all the books
-    """
-    categories_dict = generate_categories_list(BASE_URL)
-    for category in categories_dict.values():
-        try:
-            requests = requests.get(category)
-            requests.raise_for_status()
-            soup = BeautifulSoup(requests.content, "html.parser")
-            soup.prettify()
-            scrape_category(category)
-        except Exception as e:
-            print(f"Error scraping category page: {e}")
-    else:
-        if category_url not in categories_dict:
-            if book_urls:
-                while book_urls.len() > 20 and < total_books and total_pages > 1:
-                    new_request = requests.get(book_urls)
-                    requests.raise_for_status()
-                    book_soup = BeautifulSoup(new_request.content, "html.parser")
-                    book_soup.prettify()
-                    scrape_book(book_urls)
-                    break
-            else:
-                return

@@ -1,7 +1,6 @@
 from utils.book_scraper import *
 from utils.category_scraper import *
 import os
-from urllib.parse import urljoin
 
 # CONSTANT VARIABLES
 BASE_URL = "https://books.toscrape.com/"
@@ -10,43 +9,52 @@ IMAGES_BASE = os.path.join(ASSETS_BASE, "images")
 CSV_BASE = os.path.join(ASSETS_BASE, "csv")
 
 def main():
-    # Define url for book scraping
-    book_relative_url = "catalogue/the-past-never-ends_942/index.html"
-    url = urljoin(BASE_URL, book_relative_url)
-
-    # Create a dictionary of book_info from extracted (scraped) data
-    # book_info = scrape_book(url)
-    # if not book_info:
-        # print(f"Scraping failed. Exiting program")
-        # return
-
-    # Define CSV file path for writing
-    ## Possible to remove now ?
-    # csv_file_path = os.path.join(CSV_BASE, "book_data.csv")
-    # abs_csv_path = os.path.abspath(csv_file_path)
-    # print(f"Saving csv file to {abs_csv_path}")
+    csv_file_path = os.path.join(CSV_BASE, "book_data.csv")
+    absolute_csv_path = os.path.abspath(csv_file_path)
+    print(f"Saving CSV file to {absolute_csv_path}.")
 
     try:
-        # Create a categories dictionary from category_scraper.py
-        # - Keys are the category labels
-        # - Values are the urls of the category pages from this list
+        # Get categories dictionary
         categories = generate_categories_list(BASE_URL)
         if not categories:
             print("No categories found.")
             return
         else:
-            print(f"Categories found: {', '.join(categories)}")
-        # Loop over category names and their urls
-            # Scrape the category to obtain total_books, total_pages and book_urls to scan from category_url
-            # Loop through book_urls retrieved from each category page url
-            # For each book found w/ url, scrape that book url into a dictionary book_info
-            # Write csv for each new entry
-            # Download images from each image_url in each book page and set them in assets/images/ folder
-            # If no book_info is found during scraping, print an error message
-            # Else, when the loop finishes, print a message of success with information about the data collected
+            print(f"Categories found: {', '.join(categories.keys())}")
+
+        all_books_data = []  # accumulate book data
+
+        # Loop over each category
+        for category_name, category_url in categories.items():
+            print(f"\nProcessing category: {category_name}")
+
+            # Calls the function scrape_category with the given category_url and unpacks its return values:
+            # total_books: the total number of books found in the category,
+            # total_pages: the total number of pagination pages processed,
+            # book_urls: a list of URLs for each individual book in the category.
+            total_books, total_pages, book_urls = scrape_category(category_url)
+            print(f"Found {total_books} books over {total_pages} pages in {category_name} category.")
+
+            # Process each book URL in the category, defaults index to 1/(total books)
+            for index, book_url in enumerate(book_urls, 1):
+                print(f"({index}/{total_books}) Scraping book: {book_url}")
+                book_info = scrape_book(book_url)
+                if book_info:
+                    all_books_data.append(book_info)
+                else:
+                    print(f"  Failed to scrape book: {book_url}")
+
+        # Create a dictionary 'unique_books' that maps each book's unique UPC to the book_info dictionary,
+        # effectively removing duplicate entries. Then, convert the dictionary values back
+        # into a list of unique book_info dictionaries.
+        unique_books = {book["universal_product_code"]: book for book in all_books_data}
+        unique_books_list = list(unique_books.values())
+
+        # Write the unique_books_list into the csv folder
+        write_csv(unique_books_list, csv_file_path)
 
     except Exception as e:
-        print(f"An error occurred while processing the data")
+        print(f"An error occurred while processing the data: {e}")
 
 if __name__ == "__main__":
     main()

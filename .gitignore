@@ -12,6 +12,7 @@ __pycache__/
 *.jpg
 assets/
 
+.DS_Store
 
 # Notebooks
 notebooks/*

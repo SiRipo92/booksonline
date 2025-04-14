@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-import math
+
 
 BASE_URL = "https://books.toscrape.com/"
 category_page = urljoin(BASE_URL, "catalogue/category/books/mystery_3/index.html")
@@ -59,25 +59,44 @@ def scrape_category(category_url):
     current_url = category_url # The landing page of the category is our starting point
     page_count = 0 # The page_count should be initialized to zero and increased with each 'next' page available
 
-    try:
-        response = requests.get(current_url)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.content, "html.parser")
-    except Exception as e:
-        print(f"Error extracting book URLs from {current_url}: {e}")
+    while True:
+        # increase the page count for every category page url found
+        page_count += 1
+        print(f"\nProcessing page {page_count}: {current_url}")
 
-    # Retrieve the next page element <li> element with class 'next'
-    next_page = soup.find("li", class_="next")
+        #Extract book URLS on this page
+        books_on_category_page = extract_book_urls(current_url)
+        print(f"Found {len(books_on_category_page)} book URLs on this page.")
+        all_book_urls.extend(books_on_category_page)
 
-    # If this element exists, it means there's a link inside so we need to recover the link
+        try:
+            response = requests.get(current_url)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, "html.parser")
 
-    # This function will then call my extract_book_urls(category_page_url) or current-link
-    # To extract book data from each page's articles (a book url)
-    # and create a list of all_book_urls on that page
+            # Retrieve the next page element <li> element with class 'next'
+            next_li = soup.find("li", class_="next")
 
-    # THIS function, scrape_category() will then increase the page count, set the total pages to the total_count
-    # and return the length/total of all_book_urls retrieved
+            # If this element exists, it means there's a link inside so we need to recover the link
+            if next_li:
+                next_a = next_li.find("a")
+                if next_a:
+                    next_href = next_a.get("href")
+                    current_url = urljoin(current_url, next_href)
+                    print("Next page found; updating URL...")
+                else:
+                    break
+            else:
+                break
 
+        except Exception as e:
+            print(f"Error extracting book URLs from {current_url}: {e}")
+
+    # Count the total number of books in category and pages
+    total_books = len(all_book_urls)
+    total_pages = page_count
+    #  return the length/total of all_book_urls retrieved
+    return total_books, total_pages, all_book_urls
 
 def extract_book_urls(category_page_url):
     """
@@ -96,10 +115,12 @@ def extract_book_urls(category_page_url):
             h3 = article.find("h3")
             if h3:
                 a_tag = h3.find("a")
-                # Be sure this a_tag exists
-                # Get the absolute url and append the book_urls
+                if a_tag and a_tag.get("href"):
+                    relative_url = a_tag.get("href")
+                    absolute_url = urljoin(category_page_url, relative_url)
+                    # Get the absolute url and append the book_urls
+                    book_urls.append(absolute_url)
         return book_urls
     except Exception as e:
         print(f"Error extracting book URLs from {category_page_url}: {e}")
-
-
+        return []

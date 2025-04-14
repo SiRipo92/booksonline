@@ -28,10 +28,14 @@ def main():
         for category_name, category_url in categories.items():
             print(f"\nProcessing category: {category_name}")
 
+            # Calls the function scrape_category with the given category_url and unpacks its return values:
+            # total_books: the total number of books found in the category,
+            # total_pages: the total number of pagination pages processed,
+            # book_urls: a list of URLs for each individual book in the category.
             total_books, total_pages, book_urls = scrape_category(category_url)
             print(f"Found {total_books} books over {total_pages} pages in {category_name} category.")
 
-            # Process each book URL in the category
+            # Process each book URL in the category, defaults index to 1/(total books)
             for index, book_url in enumerate(book_urls, 1):
                 print(f"({index}/{total_books}) Scraping book: {book_url}")
                 book_info = scrape_book(book_url)
@@ -40,11 +44,13 @@ def main():
                 else:
                     print(f"  Failed to scrape book: {book_url}")
 
-        # Isolate unique entries by UPC
+        # Create a dictionary 'unique_books' that maps each book's unique UPC to the book_info dictionary,
+        # effectively removing duplicate entries. Then, convert the dictionary values back
+        # into a list of unique book_info dictionaries.
         unique_books = {book["universal_product_code"]: book for book in all_books_data}
         unique_books_list = list(unique_books.values())
 
-        # Write all scraped data at once
+        # Write the unique_books_list into the csv folder
         write_csv(unique_books_list, csv_file_path)
 
     except Exception as e:

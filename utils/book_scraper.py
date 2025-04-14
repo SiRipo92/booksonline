@@ -22,6 +22,7 @@ def scrape_book(url):
         soup = BeautifulSoup(book_page.content, "html.parser")
     except requests.RequestException as e:
         print(f"Error retrieving URL {url}: {e}")
+        return None
 
     # 1. Get the book_page_url
     book_page_url = url
@@ -36,19 +37,22 @@ def scrape_book(url):
 
     # 3. Get the book's description
     # Locate the <div id="product_description">
+    # Initialize as en empty string
+    book_description = ""
     try:
         description_parent = soup.find('div', id="product_description")
-
         if description_parent:
             description_paragraph = description_parent.find_next_sibling("p")
             if description_paragraph:
                 book_description = description_paragraph.get_text(strip=True)
             else:
                 print(f"No description found for {url}.")
+                book_description = ""  # Set a default value if no paragraph is found
         else:
-            print(f"No description parent element was found")
+            print(f"No description parent element was found for {url}.")
+            book_description = ""  # Set a default value if the container isn't found
     except Exception as e:
-        book_description = None
+        book_description = ""
         print(f"Error extracting description: {e}")
 
     # 4. Extract book's availability into an int
@@ -182,52 +186,11 @@ def write_csv(book_info, file_path):
         "review_rating",
         "image_url",
     ]
-    file_path = "assets/csv/book_data.csv"
-    # Unique key used to detect duplicates
-    unique_key = "universal_product_code"
-
-    existing_rows = []
-    file_exists = os.path.exists(file_path)
-
-    if file_exists:
-        with open(file_path, "r", newline="", encoding="utf-8") as csv_file:
-            try:
-                csv_reader = csv.DictReader(csv_file)
-                for row in csv_reader:
-                    existing_rows.append(row)
-            except:
-                print(f"Error reading CSV file: {file_path}")
-                existing_rows = []
-
-    # Look for duplicate entry using the unique key
-    duplicate_found = False
-    updated = False
-    for index, row in enumerate(existing_rows):
-        if row.get(unique_key) == book_info.get(unique_key):
-            duplicate_found = True
-            # Check if there's been a change in data
-            if row != book_info:
-                existing_rows[index] = book_info
-                updated = True
-            break
-
-    if duplicate_found:
-        if updated:
-            print("Duplicate entry found; data updated.")
-        else:
-            print("Duplicate entry found: no changes made.")
-            return
-    else:
-        # Append the new entry if no duplicate is found
-        existing_rows.append(book_info)
-        print("New entry added.")
-
-        # Write all rows (new, updated, or existing) to the CSV file
-        try:
-            with open(file_path, "a", newline="", encoding="utf-8") as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=columns)
-                writer.writeheader()
-                writer.writerows(existing_rows)
-            print(f"Data successfully written to CSV file: {file_path}")
-        except Exception as e:
-            print(f"Error writing to CSV file: {e}")
+    try:
+        with open(file_path, "a", newline="", encoding="utf-8") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=columns)
+            writer.writeheader()
+            writer.writerows(book_info)
+        print(f"Data successfully written to CSV file: {file_path}")
+    except Exception as e:
+        print(f"Error writing to CSV file: {e}")

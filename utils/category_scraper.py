@@ -2,7 +2,6 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
-
 BASE_URL = "https://books.toscrape.com/"
 category_page = urljoin(BASE_URL, "catalogue/category/books/mystery_3/index.html")
 

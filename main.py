@@ -1,6 +1,9 @@
 from utils.book_scraper import scrape_book, write_csv, download_book_images
 from utils.category_scraper import generate_categories_list, scrape_category
 import os
+import csv # to process the csv file
+import requests # to make requests to image_urls for download
+from urllib.parse import urlparse # to extract image url paths
 
 # CONSTANT VARIABLES
 BASE_URL = "https://books.toscrape.com/"
@@ -67,17 +70,33 @@ def main():
     except Exception as e:
         print(f"An error occurred while processing the data: {e}")
 
-
+# Once CSV file is written, it can be processed for downloading image_urls
 def download_book_images_from_csv(csv_file_path):
     """
     Inputs the generated csv file, reads it for image_urls to download the book images for each book
     Outputs each downloaded image file as a .jpg file in /assets/images directory
     """
-    pass
-
     # 1. Set the directory where images should be saved: "assets/images/"
+    image_dir = os.path.join("assets", "images")
+
     # 2. If the directory doesn't exist, create it using os.makedirs()
+    if not os.path.exists(image_dir):
+        os.makedirs(image_dir)
+        print(f"Created image directory at: {image_dir}")
+    else:
+        print("Directory already exists.")
+
     # 3. Open the CSV file using csv.DictReader()
+    try:
+        with open(csv_file_path, newline="", encoding="utf-8") as csvfile:
+            reader = csv.DictReader(csvfile)
+            image_urls = [row["image_url"] for row in reader if "image_url" in row and row["image_url"]]
+            print(f"Loaded {len(image_urls)} image URLs from CSV.")
+    except Exception as e:
+        print(f"Error reading CSV file: {e}")
+        return
+
+
     #    - Read each row into a list of dictionaries (each row represents one book)
     # 4. Count the total number of rows (images to download)
     # 5. Loop through each row with enumerate():

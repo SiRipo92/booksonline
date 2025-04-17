@@ -191,3 +191,37 @@ def write_csv(book_info_list: list[dict], file_path:str) -> None:
         print(f"Data successfully written to CSV file: {file_path}")
     except Exception as e:
         print(f"Error writing to CSV file: {e}")
+
+### Function to download images
+def download_book_images(book_list):
+    """
+    Input: the book list
+    Output: saved image file in assets/images/
+    """
+
+    ## 1. Set the base directory for saving images (e.g., "assets/images")
+    ## 2. If the directory doesn't exist, create it
+
+    ## 3. total_images = len(book_list)
+
+    ## 4. For index, book in enumerate(book_list, 1):
+        # a. Extract image_url from book
+        # b. Use os.path.basename(urlparse(image_url).path) to get the image filename
+        # c. Build full local file path: os.path.join(image_directory, filename)
+
+        # d. If the file already exists:
+            # - Print(f"[{index}/{total_images}] Image already exists: {filename}")
+            # - continue
+
+        # e. Try to download the image using requests.get(image_url, stream=True)
+        #       " stream=True " lets one write the image to a file chunk-by-chunk while it’s being downloaded :
+        #        - Advantages:
+        #           - The image is downloaded in small chunks,
+        #           - Python never holds the whole image in memory.
+        #           - It’s more memory-efficient a& safer for large-scale or slow-network downloads.
+            # - If status_code is 200:
+                # - Open local file in 'wb' (write-binary) mode and write chunks to save
+                # - Print(f"[{index}/{total_images}] Downloaded: {filename}")
+            # - Else:
+                # - Print(f"[{index}/{total_images}] Failed to download: {image_url}")
+    pass

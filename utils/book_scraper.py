@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 from bs4.element import AttributeValueList
 import requests
+import os
 import re
 import csv
 from urllib.parse import urljoin
@@ -170,6 +171,10 @@ def write_csv(book_info_list: list[dict], file_path:str) -> None:
     Input: Takes in a book_info dictionary ( from scrape_book() ) and writes it to a CSV file.
     Output: A CSV file with column headers as keys from book_info dictionary and rows for each book's data
     """
+
+    if os.path.exists(file_path):
+        remove_csv_duplicate_rows(file_path)
+
     columns = [
         "product_page_url",
         "universal_product_code",
@@ -182,6 +187,37 @@ def write_csv(book_info_list: list[dict], file_path:str) -> None:
         "review_rating",
         "image_url",
     ]
+
+    book_info_list = [
+        book for book in book_info_list
+        if set(book.values()) != set(columns)
+    ]
+
+    # Detect duplicates from current file
+    existing_upcs = set()
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, newline="", encoding="utf-8") as csvfile:
+                reader = csv.DictReader(csvfile)
+                existing_upcs = {
+                    row["universal_product_code"]
+                    for row in reader
+                    if "universal_product_code" in row
+                }
+        except Exception as e:
+            print(f"Error reading existing CSV for duplicate checking: {e}")
+
+    # Filter out entries already in the CSV
+    unique_new_books = [
+        book for book in book_info_list
+        if book["universal_product_code"] not in existing_upcs
+    ]
+
+    if not unique_new_books:
+        print("No unique entries to write.")
+        return
+
+    # Append only the new unique entries
     try:
         with open(file_path, "a", newline="", encoding="utf-8") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=columns) # type: ignore
@@ -192,36 +228,37 @@ def write_csv(book_info_list: list[dict], file_path:str) -> None:
     except Exception as e:
         print(f"Error writing to CSV file: {e}")
 
-### Function to download images
-def download_book_images(book_list):
+def remove_csv_duplicate_rows(file_path: str) -> None:
     """
-    Input: the book list
-    Output: saved image file in assets/images/
+    Removes duplicate rows from an existing CSV file based on 'universal_product_code'.
+    Keeps only the first occurrence of each unique UPC.
     """
+    try:
+        with open(file_path, newline='', encoding='utf-8') as csvfile:
+            reader = list(csv.DictReader(csvfile))
+            if not reader:
+                return  # Nothing to prune
 
-    ## 1. Set the base directory for saving images (e.g., "assets/images")
-    ## 2. If the directory doesn't exist, create it
+            header = reader[0].keys()
+            processed_upcs = set()
+            unique_rows = []
 
-    ## 3. total_images = len(book_list)
+            for row in reader:
+                # Skip row if it's an accidental header
+                if set(row.values()) == set(header):
+                    continue
 
-    ## 4. For index, book in enumerate(book_list, 1):
-        # a. Extract image_url from book
-        # b. Use os.path.basename(urlparse(image_url).path) to get the image filename
-        # c. Build full local file path: os.path.join(image_directory, filename)
+                upc = row.get("universal_product_code")
+                if upc and upc not in processed_upcs:
+                    processed_upcs.add(upc)
+                    unique_rows.append(row)
 
-        # d. If the file already exists:
-            # - Print(f"[{index}/{total_images}] Image already exists: {filename}")
-            # - continue
-
-        # e. Try to download the image using requests.get(image_url, stream=True)
-        #       " stream=True " lets one write the image to a file chunk-by-chunk while it’s being downloaded :
-        #        - Advantages:
-        #           - The image is downloaded in small chunks,
-        #           - Python never holds the whole image in memory.
-        #           - It’s more memory-efficient a& safer for large-scale or slow-network downloads.
-            # - If status_code is 200:
-                # - Open local file in 'wb' (write-binary) mode and write chunks to save
-                # - Print(f"[{index}/{total_images}] Downloaded: {filename}")
-            # - Else:
-                # - Print(f"[{index}/{total_images}] Failed to download: {image_url}")
-    pass
+        # Overwrite file with pruned content
+        if unique_rows:
+            with open(file_path, "w", newline="", encoding="utf-8") as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=unique_rows[0].keys()) # type: ignore
+                writer.writeheader()
+                writer.writerows(unique_rows)
+            print(f"CSV cleaned of duplicates — {len(reader) - len(unique_rows)} duplicates removed.")
+    except Exception as e:
+        print(f"Error while removing duplicate entries: {e}")

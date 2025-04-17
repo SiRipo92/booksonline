@@ -107,21 +107,32 @@ def download_book_images_from_csv(csv_file_path):
         print(f"Error reading CSV file: {e}")
         return
 
+    total_images = len(image_urls)
     # 5. Loop through each row with enumerate():
-    #     a. Extract 'image_url' from the current row
-    #     b. If no image_url, print a message and continue to next
-    #     c. Use urlparse + os.path.basename() to extract filename from the URL
-    #     d. Construct full local file path: os.path.join(image_dir, filename)
-    #     e. Check if the image already exists at that location
-    #        - If so, print a "already exists" message and continue
-    #     f. Download the image using requests.get(url, stream=True)
-    #        - If status_code == 200:
-    #            - Open the local file in 'wb' mode
-    #            - Write to file in chunks (iter_content)
-    #            - Print a progress message
-    #        - Else:
-    #            - Print a failure message
-    #     g. Catch and print any exceptions raised during download
+    for index, image_url in enumerate(image_urls, 1):
+        filename = os.path.basename(urlparse(image_url).path) # extract filename from the URL
+        local_path = os.path.join(image_dir, filename) # construct full local file path
+        # Check if the image already exists at that location
+        if os.path.exists(local_path):
+            # If so, print a "already exists" message and continue
+            print(f"Skipping [{index}/{total_images}]: Image already exists at {local_path} under '{filename}'.")
+            continue
+        #  Download the image using requests.get(url, stream=True)
+        try:
+            response = requests.get(image_url, stream=True)
+            # If status_code == 200, open the local file in 'wb' mode, write to file, print progress messsage
+            if response.status_code == 200:
+                with open(local_path, "wb") as file:
+                    for chunk in response.iter_content(chunk_size=1024):
+                        file.write(chunk)
+                print(f"Downloaded ({index}/{total_images}): '{filename}' at '{local_path}'.")
+            # If status_code is other than 200, print a failure message
+            else:
+                print(f"[{index}/{total_images}] Failed to download (status {response.status_code}): {image_url}")
+        except Exception as e:
+            print(f"[{index}/{total_images}] Error downloading {image_url}: {e}")
+            continue
+
 
 if __name__ == "__main__":
     main()

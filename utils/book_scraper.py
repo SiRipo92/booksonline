@@ -7,9 +7,8 @@ from urllib.parse import urljoin
 
 def scrape_book(url):
     """
-    Inputs a book page url
-    Extracts, transforms and then loads the data
-    Outputs a dictionary 'book_info' with the extracted and transformed data
+    Inputs a book page url and extracts, transforms and then loads the data
+    Outputs a 'book_info' dictionary to be used to write a csv file with each book's info
     """
 
     try:
@@ -167,12 +166,9 @@ def scrape_book(url):
 
 def write_csv(book_info, file_path):
     """
-    Input: Takes in a book_info dictionary (from scrape_book()) and writes it to a CSV file.
+    Input: Takes in a book_info dictionary ( from scrape_book() ) and writes it to a CSV file.
 
-    Output: If an entry with the same universal_product_code already exists:
-      - If data has changed, update that entry.
-      - If data is the same, do nothing.
-    Otherwise, a new row is appended.
+    Output: A CSV file with column headers as keys from book_info dictionary and rows for each book's data
     """
     columns = [
         "product_page_url",

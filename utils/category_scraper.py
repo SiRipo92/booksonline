@@ -50,34 +50,38 @@ def generate_categories_list(base_url=BASE_URL):
 
 def scrape_category(category_url):
     """
-    Inputs a category_url obtained from the function 'generate_categories_list',
-    Collects the total number of books and pages to scrape along and retrieves each book's url
-    Outputs a list of all book URLs to scrape
+    Inputs: a category_url obtained from the function 'generate_categories_list'
+    Outputs:
+        - a list of all book URLs to scrape from the inputted url
+        - a total number of pages within each category page using its pagination button
+        - total number of books within each paginated category page
     """
 
     all_book_urls = [] # Initialize an empty list to hold all book urls to scrape
     current_url = category_url # The landing page of the category is our starting point
-    page_count = 0 # The page_count should be initialized to zero and increased with each 'next' page available
+    page_count = 0 # The page_count is initialized to zero and increased with each 'next' page available
 
     while True:
-        # increase the page count for every category page url found
+        # Increase the page count for every category page url found
         page_count += 1
         print(f"\nProcessing page {page_count}: {current_url}")
 
-        #Extract book URLS on this page
+        # Call function to extract book urls and append the empty list
         books_on_category_page = extract_book_urls(current_url)
         print(f"Found {len(books_on_category_page)} book URLs on this page.")
         all_book_urls.extend(books_on_category_page)
 
+        # Attempt to :
+        # - get the parsed HTML content of category page,
+        # - retrieve the paginated url link for next pages
+        # If not successful, terminate the script for that category and print error
         try:
             response = requests.get(current_url)
             response.raise_for_status()
             soup = BeautifulSoup(response.content, "html.parser")
 
-            # Retrieve the next page element <li> element with class 'next'
             next_li = soup.find("li", class_="next")
 
-            # If this element exists, it means there's a link inside so we need to recover the link
             if next_li:
                 next_a = next_li.find("a")
                 if next_a:
@@ -92,10 +96,12 @@ def scrape_category(category_url):
         except Exception as e:
             print(f"Error extracting book URLs from {current_url}: {e}")
 
-    # Count the total number of books in category and pages
+    # Count the total number of books and pages from category
     total_books = len(all_book_urls)
     total_pages = page_count
-    #  return the length/total of all_book_urls retrieved
+
+    # Return the deconstructed data for total books, total pages and the list of all_book_urls
+    # Purpose: scrape all book urls and provide clear, printed messages while scraping categories
     return total_books, total_pages, all_book_urls
 
 def extract_book_urls(category_page_url):

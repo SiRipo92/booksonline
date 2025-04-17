@@ -1,5 +1,5 @@
-from utils.book_scraper import *
-from utils.category_scraper import *
+from utils.book_scraper import scrape_book, write_csv
+from utils.category_scraper import generate_categories_list, scrape_category
 import os
 
 # CONSTANT VARIABLES
@@ -35,7 +35,7 @@ def main():
             # total_pages: the total number of pagination pages processed,
             # book_urls: a list of URLs for each individual book in the category.
             total_books, total_pages, book_urls = scrape_category(category_url)
-            print(f"Found {total_books} books over {total_pages} pages in {category_name} category.")
+            print(f"Found {total_books} books over {total_pages} page(s) in {category_name} category.")
 
             # Step 3: Process each book URL in the category pages
             # defaults index to 1/(total books)
@@ -48,7 +48,7 @@ def main():
                 if book_info:
                     all_books_data.append(book_info)
                 else:
-                    print(f"  Failed to scrape book: {book_url}")
+                    print(f"Failed to scrape book: {book_url}")
 
         # Step 4: Add a check to ensure no duplicate entries are scrapped and added
         # Creates a dictionary 'unique_books' that maps each book's unique UPC to the book_info dictionary,
@@ -57,10 +57,11 @@ def main():
         unique_books = {book["universal_product_code"]: book for book in all_books_data}
         unique_books_list = list(unique_books.values())
 
-        # Step 5: Download images and store them in /assets/images directory
-
-        # Step 6: Write the unique_books_list into the csv folder
+        # Step 5: Write the unique_books_list into the csv folder
         write_csv(unique_books_list, csv_file_path)
+
+        # Step 6: Download images and store them in /assets/images directory
+        # download_book_images()
 
 
     except Exception as e:

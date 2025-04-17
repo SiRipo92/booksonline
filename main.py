@@ -61,11 +61,40 @@ def main():
         write_csv(unique_books_list, csv_file_path)
 
         # Step 6: Download images and store them in /assets/images directory
-        # download_book_images()
+        download_book_images_from_csv(csv_file_path)
 
 
     except Exception as e:
         print(f"An error occurred while processing the data: {e}")
+
+
+def download_book_images_from_csv(csv_file_path):
+    """
+    Inputs the generated csv file, reads it for image_urls to download the book images for each book
+    Outputs each downloaded image file as a .jpg file in /assets/images directory
+    """
+    pass
+
+    # 1. Set the directory where images should be saved: "assets/images/"
+    # 2. If the directory doesn't exist, create it using os.makedirs()
+    # 3. Open the CSV file using csv.DictReader()
+    #    - Read each row into a list of dictionaries (each row represents one book)
+    # 4. Count the total number of rows (images to download)
+    # 5. Loop through each row with enumerate():
+    #     a. Extract 'image_url' from the current row
+    #     b. If no image_url, print a message and continue to next
+    #     c. Use urlparse + os.path.basename() to extract filename from the URL
+    #     d. Construct full local file path: os.path.join(image_dir, filename)
+    #     e. Check if the image already exists at that location
+    #        - If so, print a "already exists" message and continue
+    #     f. Download the image using requests.get(url, stream=True)
+    #        - If status_code == 200:
+    #            - Open the local file in 'wb' mode
+    #            - Write to file in chunks (iter_content)
+    #            - Print a progress message
+    #        - Else:
+    #            - Print a failure message
+    #     g. Catch and print any exceptions raised during download
 
 if __name__ == "__main__":
     main()

@@ -13,6 +13,15 @@ IMAGES_BASE = os.path.join(ASSETS_BASE, "images")
 CSV_BASE = os.path.join(ASSETS_BASE, "csv")
 
 def main():
+    """
+    Inputs url for https://books.toscrape.com/ to generate a list of categories
+        - Each category is then processed to determine total pages, total number of books, and book_urls
+        - Each category assigns an index to each book on each page and scrapes the book_data
+        - Each scraped book outputs a dictionary (book_data)
+        - Each book_data dictionary is collected into a list 'all_books_data'
+    Outputs:
+        - a filtered list of unique book_data dictionaries to write using book_info["universal_product_code"]
+    """
     csv_file_path = os.path.join(CSV_BASE, "book_data.csv")
     absolute_csv_path = os.path.abspath(csv_file_path)
     print(f"Saving CSV file to {absolute_csv_path}.")
@@ -29,23 +38,15 @@ def main():
 
         all_books_data = []  # Initializes a list to accumulate book_info dictionaries
 
-        # Step 2: Loop over each category to extract total_books, total_pages, and book_urls
-        # by scraping each category page url, then unpack each category page url and scrape it
+        # Step 2: Iterate over each category to extract total_books, total_pages, and book_urls
         for category_name, category_url in categories.items():
             print(f"\nProcessing category: {category_name}")
 
-            # Calls the function scrape_category with the given category_url and unpacks its return values:
-            # total_books: the total number of books found in the category,
-            # total_pages: the total number of pagination pages processed,
-            # book_urls: a list of URLs for each individual book in the category.
+            # Calls the function scrape_category with the given category_url and unpacks its return values
             total_books, total_pages, book_urls = scrape_category(category_url)
             print(f"Found {total_books} books over {total_pages} page(s) in {category_name} category.")
 
             # Step 3: Process each book URL in the category pages
-            # defaults index to 1/(total books)
-            # Collect each individual book page url, scrape it and return output to book_info dictionary
-            # As long as there is an index for books to scrape,
-            # store each book_info dictionary in an all_books_data list
             for index, book_url in enumerate(book_urls, 1):
                 print(f"({index}/{total_books}) Scraping book: {book_url}")
                 book_info = scrape_book(book_url)
@@ -55,9 +56,6 @@ def main():
                     print(f"Failed to scrape book: {book_url}")
 
         # Step 4: Add a check to ensure no duplicate entries are scrapped and added
-        # Creates a dictionary 'unique_books' that maps each book's unique UPC to the book_info dictionary,
-        # effectively removing duplicate entries. Then, converts the dictionary values back
-        # into a list of unique book_info dictionaries.
         unique_books = {book["universal_product_code"]: book for book in all_books_data}
         unique_books_list = list(unique_books.values())
 
@@ -108,8 +106,10 @@ def download_book_images_from_csv(csv_file_path):
         print(f"Error reading CSV file: {e}")
         return
 
-    total_images = len(image_urls)
-    failed_downloads = []
+
+    total_images = len(image_urls) # set total_images equal to the length of the image_urls list
+    failed_downloads = [] # collect list of failed downloaded urls
+    
     # 5. Loop through each row with enumerate():
     for index, image_url in enumerate(image_urls, 1):
         filename = os.path.basename(urlparse(image_url).path) # extract filename from the URL
@@ -119,7 +119,8 @@ def download_book_images_from_csv(csv_file_path):
             # If so, print a message "already exists" and continue
             print(f"Skipping [{index}/{total_images}]: Image already exists at {local_path} under '{filename}'.")
             continue
-        #  Download the image using requests.get(url, stream=True)
+
+        #  Attempt to download image and if failed, store it in failed_downloads list
         try:
             response = requests.get(image_url, stream=True)
             # If status_code == 200, open the local file in 'wb' mode, write to file, print progress messsage
@@ -135,24 +136,29 @@ def download_book_images_from_csv(csv_file_path):
         except Exception as e:
             print(f"[{index}/{total_images}] Error downloading {image_url}: {e}")
             failed_downloads.append(image_url)
-
+            
+    # Manage failed downloads list to reattempt
     if failed_downloads:
         print(f"\nRetrying {len(failed_downloads)} failed downloads...")
-        time.sleep(2)
+        time.sleep(2) # delays execution for 2 seconds before trying again
         for retry_index, image_url in enumerate(failed_downloads, 1):
+            # Avoids attempt to download header row 'image_url' or any invalid URL
             if not image_url.startswith("http"):
                 print(f"Retry ({retry_index}/{len(failed_downloads)}): Skipped invalid URL: {image_url}")
                 continue
-
+            # Sets file name and where it'll be placed in project directory if successfully downloaded
             filename = os.path.basename(urlparse(image_url).path)
             local_path = os.path.join(image_dir, filename)
             try:
+                # 'stream' allows to download large sets of images in chunks to save memory
+                # timeout if a problem occurs in downloading after 10 seconds
                 response = requests.get(image_url, stream=True, timeout=10)
                 if response.status_code == 200:
                     with open(local_path, "wb") as file:
                         for chunk in response.iter_content(chunk_size=1024):
                             file.write(chunk)
                     print(f"Retry ({retry_index}/{len(failed_downloads)}): Downloaded {filename}")
+                # If the response fails, log the failed attempts and errors
                 else:
                     print(
                         f"Retry ({retry_index}/{len(failed_downloads)}): Failed (status {response.status_code}): {image_url}")

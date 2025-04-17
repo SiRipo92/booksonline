@@ -86,19 +86,27 @@ def download_book_images_from_csv(csv_file_path):
     else:
         print("Directory already exists.")
 
-    # 3. Open the CSV file using csv.DictReader()
+    # 3. Open the CSV file using csv.DictReader() obtain the image_urls from each row
     try:
         with open(csv_file_path, newline="", encoding="utf-8") as csvfile:
-            reader = csv.DictReader(csvfile)
+            reader = list(csv.DictReader(csvfile)) # converts to a list
             image_urls = [row["image_url"] for row in reader if "image_url" in row and row["image_url"]]
             print(f"Loaded {len(image_urls)} image URLs from CSV.")
+            # 4. Count the total number of rows (images to download) and compare to total retreived image_urls
+            if not image_urls:
+                print("No image URLs found.")
+            elif len(image_urls) < len(reader):
+                print(f"Warning: {len(reader) - len(image_urls)} entries are missing image URLs.")
+                missing_images = [row for row in reader if not row.get("image_url")]
+                for index, row in enumerate(missing_images, 1):
+                    print(f"Missing image URL for book entry #{index}: {row.get('title', 'Unknown Title')}")
+            else:
+                print("All book entries have image URLs.")
+
     except Exception as e:
         print(f"Error reading CSV file: {e}")
         return
 
-
-    #    - Read each row into a list of dictionaries (each row represents one book)
-    # 4. Count the total number of rows (images to download)
     # 5. Loop through each row with enumerate():
     #     a. Extract 'image_url' from the current row
     #     b. If no image_url, print a message and continue to next

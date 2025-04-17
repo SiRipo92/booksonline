@@ -4,6 +4,7 @@ import os
 import csv # to process the csv file
 import requests # to make requests to image_urls for download
 from urllib.parse import urlparse # to extract image url paths
+import time
 
 # CONSTANT VARIABLES
 BASE_URL = "https://books.toscrape.com/"
@@ -90,14 +91,14 @@ def download_book_images_from_csv(csv_file_path):
     try:
         with open(csv_file_path, newline="", encoding="utf-8") as csvfile:
             reader = list(csv.DictReader(csvfile)) # converts to a list
-            image_urls = [row["image_url"] for row in reader if "image_url" in row and row["image_url"]]
+            image_urls = [row["image_url"] for row in reader if row.get("image_url", "").startswith("http")]
             print(f"Loaded {len(image_urls)} image URLs from CSV.")
             # 4. Count the total number of rows (images to download) and compare to total retreived image_urls
             if not image_urls:
                 print("No image URLs found.")
             elif len(image_urls) < len(reader):
                 print(f"Warning: {len(reader) - len(image_urls)} entries are missing image URLs.")
-                missing_images = [row for row in reader if not row.get("image_url")]
+                missing_images = [row for row in reader if not row.get("image_url") or not row["image_url"].startswith("http")]
                 for index, row in enumerate(missing_images, 1):
                     print(f"Missing image URL for book entry #{index}: {row.get('title', 'Unknown Title')}")
             else:
@@ -108,13 +109,14 @@ def download_book_images_from_csv(csv_file_path):
         return
 
     total_images = len(image_urls)
+    failed_downloads = []
     # 5. Loop through each row with enumerate():
     for index, image_url in enumerate(image_urls, 1):
         filename = os.path.basename(urlparse(image_url).path) # extract filename from the URL
         local_path = os.path.join(image_dir, filename) # construct full local file path
         # Check if the image already exists at that location
         if os.path.exists(local_path):
-            # If so, print a "already exists" message and continue
+            # If so, print a message "already exists" and continue
             print(f"Skipping [{index}/{total_images}]: Image already exists at {local_path} under '{filename}'.")
             continue
         #  Download the image using requests.get(url, stream=True)
@@ -129,9 +131,33 @@ def download_book_images_from_csv(csv_file_path):
             # If status_code is other than 200, print a failure message
             else:
                 print(f"[{index}/{total_images}] Failed to download (status {response.status_code}): {image_url}")
+                failed_downloads.append(image_url)
         except Exception as e:
             print(f"[{index}/{total_images}] Error downloading {image_url}: {e}")
-            continue
+            failed_downloads.append(image_url)
+
+    if failed_downloads:
+        print(f"\nRetrying {len(failed_downloads)} failed downloads...")
+        time.sleep(2)
+        for retry_index, image_url in enumerate(failed_downloads, 1):
+            if not image_url.startswith("http"):
+                print(f"Retry ({retry_index}/{len(failed_downloads)}): Skipped invalid URL: {image_url}")
+                continue
+
+            filename = os.path.basename(urlparse(image_url).path)
+            local_path = os.path.join(image_dir, filename)
+            try:
+                response = requests.get(image_url, stream=True, timeout=10)
+                if response.status_code == 200:
+                    with open(local_path, "wb") as file:
+                        for chunk in response.iter_content(chunk_size=1024):
+                            file.write(chunk)
+                    print(f"Retry ({retry_index}/{len(failed_downloads)}): Downloaded {filename}")
+                else:
+                    print(
+                        f"Retry ({retry_index}/{len(failed_downloads)}): Failed (status {response.status_code}): {image_url}")
+            except Exception as e:
+                print(f"Retry ({retry_index}/{len(failed_downloads)}): Error downloading {image_url}: {e}")
 
 
 if __name__ == "__main__":

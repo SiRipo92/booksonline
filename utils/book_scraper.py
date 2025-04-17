@@ -1,14 +1,16 @@
-import os
 from bs4 import BeautifulSoup
+from bs4.element import AttributeValueList
 import requests
 import re
 import csv
 from urllib.parse import urljoin
+from typing import Optional
 
-def scrape_book(url):
+def scrape_book(url: str) -> Optional[dict]:
     """
     Inputs a book page url and extracts, transforms and then loads the data
     Outputs a 'book_info' dictionary to be used to write a csv file with each book's info
+    Returns None on failure.
     """
 
     try:
@@ -37,7 +39,7 @@ def scrape_book(url):
     # 3. Get the book's description
     # Locate the <div id="product_description">
     # Initialize as en empty string
-    book_description = ""
+    book_description: str = ""
     try:
         description_parent = soup.find('div', id="product_description")
         if description_parent:
@@ -49,9 +51,7 @@ def scrape_book(url):
                 book_description = ""  # Set a default value if no paragraph is found
         else:
             print(f"No description parent element was found for {url}.")
-            book_description = ""  # Set a default value if the container isn't found
     except Exception as e:
-        book_description = ""
         print(f"Error extracting description: {e}")
 
     # 4. Extract book's availability into an int
@@ -71,7 +71,7 @@ def scrape_book(url):
     try:
         rating_tag = soup.find("p", class_="star-rating")
         if rating_tag:
-            rating_classes = rating_tag.get("class", [])  # e.g., ['star-rating', 'Three']
+            rating_classes = rating_tag.get("class", AttributeValueList())  # e.g., ['star-rating', 'Three']
             rating_map = {
                 "One": "1/5",
                 "Two": "2/5",
@@ -113,6 +113,7 @@ def scrape_book(url):
     price_excluding_tax = table_data.get("Price (excl. tax)", None)
 
     # 7. Category (from breadcrumb)
+    book_category: Optional[str] = None
     try:
         breadcrumb_list = soup.find("ul", class_="breadcrumb")
         if breadcrumb_list:
@@ -164,10 +165,9 @@ def scrape_book(url):
     return book_info
 
 
-def write_csv(book_info, file_path):
+def write_csv(book_info_list: list[dict], file_path:str) -> None:
     """
     Input: Takes in a book_info dictionary ( from scrape_book() ) and writes it to a CSV file.
-
     Output: A CSV file with column headers as keys from book_info dictionary and rows for each book's data
     """
     columns = [
@@ -184,9 +184,10 @@ def write_csv(book_info, file_path):
     ]
     try:
         with open(file_path, "a", newline="", encoding="utf-8") as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=columns)
-            writer.writeheader()
-            writer.writerows(book_info)
+            writer = csv.DictWriter(csvfile, fieldnames=columns) # type: ignore
+            if csvfile.tell() == 0: # Use function tell() to determine if headers have already been written
+                writer.writeheader()
+            writer.writerows(book_info_list)
         print(f"Data successfully written to CSV file: {file_path}")
     except Exception as e:
         print(f"Error writing to CSV file: {e}")

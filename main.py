@@ -1,4 +1,4 @@
-from utils.book_scraper import scrape_book, write_csv
+from utils.book_scraper import scrape_book, write_csv, download_book_images
 from utils.category_scraper import generate_categories_list, scrape_category
 import os
 

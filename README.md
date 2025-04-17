@@ -19,6 +19,60 @@ Développer un scraper capable de :
 - Télécharger et enregistrer les images associées aux produits.
 - Mettre en place une version beta du système de surveillance des prix.
 
+## Structure du Projet
+```text
+booksonline/
+├── main.py                       # Point d'entrée du projet
+├── requirements.txt              # Dépendances Python à installer
+├── assets/                       # Contient les fichiers générés
+│   ├── csv/                      # CSV exporté contenant les données livres
+│   │   └── book_data.csv
+│   └── images/                   # Images téléchargées pour chaque livre
+├── utils/                        # Package utilitaire contenant les fonctions du scraper
+│   ├── __init__.py
+│   ├── book_scraper.py          # Scrape les infos de chaque livre, écrit le CSV, supprime les doublons
+│   └── category_scraper.py      # Scrape les catégories et les URL de chaque livre
+```
+### Comment les fichiers fonctionnent ensemble
+
+#### 🔁 `main.py`
+- Coordonne tout le processus ETL.
+- Appelle les fonctions des modules `utils/` dans l'ordre logique :
+  1. `generate_categories_list()` → récupère les catégories du site.
+  2. `scrape_category()` → récupère toutes les URLs de livres par catégorie.
+  3. `scrape_book()` → récupère les données de chaque livre (appel depuis `book_scraper.py`).
+  4. `write_csv()` → écrit les données nettoyées dans un fichier CSV en supprimant les doublons.
+  5. `download_book_images_from_csv()` → télécharge les images selon les URL valides dans le CSV.
+
+#### 🧠 `book_scraper.py`
+- Fonction principale : `scrape_book(url)` :
+  - Isole les données pertinentes (titre, prix, stock, etc.).
+  - Nettoie et structure les résultats dans un dictionnaire Python.
+- `write_csv(book_info_list, file_path)` :
+  - Supprime les doublons à partir des `UPC`.
+  - N'écrit que les nouvelles entrées valides.
+- `remove_csv_duplicate_rows(file_path)` :
+  - Supprime toute répétition ou ligne de type "header accidentel".
+
+#### 📚 `category_scraper.py`
+- `generate_categories_list(base_url)` :
+  - I/O: URL du site en entrée, dictionnaire `{nom_catégorie: url}` en sortie.
+- `scrape_category(category_url)` :
+  - Récupère les pages d'une catégorie en gérant la pagination.
+  - En sortie :
+    - le nombre total de livres,
+    - le nombre total de pages,
+    - une liste d’URL de chaque livre.
+- `extract_book_urls(page_url)` :
+  - Récupère toutes les URL de livres listés dans une page de catégorie.
+
+### Avantages de l'organisation modulaire
+- **Lisibilité améliorée** : chaque fichier a une mission claire (extraction, transformation, chargement).
+- **Maintenance facilitée** : on peut modifier une fonction sans impacter le reste du système.
+- **Réutilisabilité** : fonctions comme `write_csv()` ou `scrape_book()` peuvent être appelées ailleurs.
+- **Séparation des responsabilités** : évite un fichier monolithique.
+
+
 ## Phases du Projet
 
 ### Phase 1 : Extraction d'une Page Produit
@@ -40,31 +94,22 @@ Développer un scraper capable de :
 
 ### Phase 2 : Extraction des Données d'une Catégorie
 
-- **Objectif :**  
-  Choisir une catégorie sur Books To Scrape et extraire l'URL de la page produit pour chaque livre de la catégorie.  
-  Combiner ces URL avec le script de la Phase 1 pour extraire les informations de tous les livres de la catégorie.
-- **Points Importants :**  
-  - Gestion de la pagination : Certaines catégories contiennent plus de 20 livres répartis sur plusieurs pages.
-- **Livrable :**  
-  Un fichier CSV unique regroupant les données de tous les livres d'une catégorie.
+### Phase 1 : Extraction d'une Page Produit
+- Extraire les données détaillées d'un livre donné.
+- Générer un dictionnaire des infos du livre.
 
-### Phase 3 : Extraction des Données de Toutes les Catégories
+### Phase 2 : Extraction d'une Catégorie
+- Scraper toutes les pages d'une catégorie et leurs produits.
+- Gérer la pagination.
 
-- **Objectif :**  
-  Étendre le script pour :
-  - Extraire toutes les catégories disponibles sur le site.
-  - Pour chaque catégorie, extraire les informations produits de tous les livres.
-- **Livrable :**  
-  Un fichier CSV distinct pour chaque catégorie de livres.
+### Phase 3 : Extraction Globale
+- Automatiser le scraping de toutes les catégories du site.
+- Agréger les données dans un CSV.
 
-### Phase 4 : Téléchargement et Enregistrement des Images
-
-- **Objectif :**  
-  Prolonger le travail des phases précédentes pour :
-  - Télécharger l'image associée à chaque page produit visitée.
-  - Enregistrer ces images dans un dossier dédié.
-- **Livrable :**  
-  Un dossier contenant toutes les images téléchargées.
+### Phase 4 : Téléchargement des Images
+- Identifier et télécharger toutes les images depuis les URL extraites.
+- Vérifier qu’elles respectent les extensions autorisées (`.jpg`, `.jpeg`, `.png`, `.svg`, `.gif`, `.webp`).
+- Réessayer les téléchargements échoués avec un `timeout` et `retry`.
 
 ## Installation et Configuration
 
@@ -95,12 +140,18 @@ pip install -r requirements.txt
 *Note - ceci n'est pas inclus dans ce repository*
 
 ## Utilisation
-- Exécution du script:
-  ```
-  python3 main.py
-  ```
-- Mise-à-jour du Repository
-  <p>J'éffectuerai des commits réguliers avec des messages clairs décrivant vos modifications.</p>
+
+Exécuter le projet avec :
+```bash
+python3 main.py
+```
+
+Ce script :
+- scrape toutes les catégories,
+- télécharge toutes les informations produit,
+- nettoie les doublons,
+- écrit le CSV,
+- télécharge les images si elles sont valides.
 
 ### Remarques
 - **Surveillance en Temps Réel:** Ce projet ne réalise pas une surveillance continue des prix, mais un relevé des prix au moment de l'exécution.

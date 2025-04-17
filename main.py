@@ -11,6 +11,8 @@ BASE_URL = "https://books.toscrape.com/"
 ASSETS_BASE = "assets/"
 IMAGES_BASE = os.path.join(ASSETS_BASE, "images")
 CSV_BASE = os.path.join(ASSETS_BASE, "csv")
+# Allowed image file extensions to allow for different or possibly changing formats
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".svg"}
 
 def main():
     """
@@ -21,6 +23,8 @@ def main():
         - Each book_data dictionary is collected into a list 'all_books_data'
     Outputs:
         - a filtered list of unique book_data dictionaries to write using book_info["universal_product_code"]
+        - a total number of images downloaded out of total books found
+        - a directory of downloaded images
     """
     csv_file_path = os.path.join(CSV_BASE, "book_data.csv")
     absolute_csv_path = os.path.abspath(csv_file_path)
@@ -89,16 +93,29 @@ def download_book_images_from_csv(csv_file_path):
     try:
         with open(csv_file_path, newline="", encoding="utf-8") as csvfile:
             reader = list(csv.DictReader(csvfile)) # converts to a list
-            image_urls = [row["image_url"] for row in reader if row.get("image_url", "").startswith("http")]
+            image_urls = [
+                row["image_url"]
+                for row in reader
+                if row.get("image_url", "").startswith("http")
+                # Ensures that it has both the http prefix and proper image extension suffix
+                and os.path.splitext(urlparse(row["image_url"]).path)[1].lower() in ALLOWED_EXTENSIONS
+            ]
+
             print(f"Loaded {len(image_urls)} image URLs from CSV.")
             # 4. Count the total number of rows (images to download) and compare to total retreived image_urls
             if not image_urls:
                 print("No image URLs found.")
             elif len(image_urls) < len(reader):
                 print(f"Warning: {len(reader) - len(image_urls)} entries are missing image URLs.")
-                missing_images = [row for row in reader if not row.get("image_url") or not row["image_url"].startswith("http")]
+                missing_images = [
+                    row for row in reader
+                    if not row.get("image_url")
+                    or not row["image_url"].startswith("http")
+                    # Includes check that it conforms with photo extension types to download
+                    or os.path.splitext(urlparse(row["image_url"]).path)[1].lower() not in ALLOWED_EXTENSIONS
+                ]
                 for index, row in enumerate(missing_images, 1):
-                    print(f"Missing image URL for book entry #{index}: {row.get('title', 'Unknown Title')}")
+                    print(f"Missing or unsupported image URL for book entry #{index}: {row.get('title', 'Unknown Title')}")
             else:
                 print("All book entries have image URLs.")
 
@@ -137,7 +154,7 @@ def download_book_images_from_csv(csv_file_path):
             print(f"[{index}/{total_images}] Error downloading {image_url}: {e}")
             failed_downloads.append(image_url)
             
-    # Manage failed downloads list to reattempt
+    # 6. Manage failed downloads list to reattempt
     if failed_downloads:
         print(f"\nRetrying {len(failed_downloads)} failed downloads...")
         time.sleep(2) # delays execution for 2 seconds before trying again
@@ -164,7 +181,6 @@ def download_book_images_from_csv(csv_file_path):
                         f"Retry ({retry_index}/{len(failed_downloads)}): Failed (status {response.status_code}): {image_url}")
             except Exception as e:
                 print(f"Retry ({retry_index}/{len(failed_downloads)}): Error downloading {image_url}: {e}")
-
 
 if __name__ == "__main__":
     main()

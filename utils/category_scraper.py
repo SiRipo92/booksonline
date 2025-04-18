@@ -148,10 +148,34 @@ def write_category_csv_files(category_name: str, book_list: list[dict], base_dir
         - Logs progress and any errors encountered.
     """
     # Step 1: Normalize category name for filename (e.g., 'Science Fiction' -> 'science_fiction')
+    sanitized_category_name = category_name.lower().replace(" ", "_")
+
     # Step 2: Define the full path for categories directory
+    categories_dir = os.path.join(base_dir, sanitized_category_name)
+    abs_categories_dir = os.path.abspath(categories_dir)
+
     # Step 3: Create categories directory if it doesn't exist
+    if not os.path.exists(categories_dir):
+        os.makedirs(categories_dir)
+        print(f"Created a new directory for {category_name} in {abs_categories_dir}")
+
     # Step 4: Define the full CSV path for the current category
+    category_csv_path = os.path.join(categories_dir, f"{sanitized_category_name}.csv")
+
     # Step 5: Define column headers (same as book_data.csv)
+    headers = [
+        "product_page_url",
+        "universal_product_code",
+        "title",
+        "price_including_tax",
+        "price_excluding_tax",
+        "number_available",
+        "product_description",
+        "category",
+        "review_rating",
+        "image_url",
+    ]
+
     # Step 6: Filter books by category name
     # Step 7: If no books for this category, log and return
     # Step 8: Check for existing entries (by UPC) if file exists

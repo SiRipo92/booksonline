@@ -1,5 +1,5 @@
 from utils.book_scraper import scrape_book, write_book_data_csv
-from utils.category_scraper import generate_categories_list, scrape_category
+from utils.category_scraper import generate_categories_list, scrape_category, write_category_csv_files
 import os
 import csv # to process the csv file
 import requests # to make requests to image_urls for download
@@ -35,6 +35,8 @@ def main():
     absolute_csv_path = os.path.abspath(csv_file_path)
     print(f"Saving CSV file to {absolute_csv_path}.")
 
+    ### ETL PROCESS 1: Extract, Transform, Load category and book data to csv files
+    # EXTRACTION AND TRANSFORMATION PHASES
     try:
         # Step 1: Create a categories dictionary for category pages to scrape
         categories = generate_categories_list(BASE_URL)
@@ -64,18 +66,22 @@ def main():
                 else:
                     print(f"Failed to scrape book: {book_url}")
 
+        ### LOADING PHASE
         # Step 4: Write the unique_books_list into the csv folder
         write_book_data_csv(all_books_data, csv_file_path)
         # Step 5: Write category csv files
+        print("\nWriting category-specific CSV files...")
+        for category_name in categories:
+            write_category_csv_files(category_name, all_books_data, CSV_BASE)
 
-        # Step 5: Download images and store them in /assets/images directory
+        # Step 6: Download images and store them in /assets/images directory
         download_book_images_from_csv(csv_file_path)
 
 
     except Exception as e:
         print(f"An error occurred while processing the data: {e}")
 
-# Once CSV file is written, it can be processed for downloading image_urls
+### ETL PROCESS 2 : Function to download images urls once CSV file is written
 def download_book_images_from_csv(csv_file_path):
     """
     Inputs the generated csv file, reads it for image_urls to download the book images for each book

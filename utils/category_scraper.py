@@ -1,6 +1,8 @@
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
+import os
+import csv
 
 BASE_URL = "https://books.toscrape.com/"
 category_page = urljoin(BASE_URL, "catalogue/category/books/mystery_3/index.html")
@@ -129,3 +131,32 @@ def extract_book_urls(category_page_url):
     except Exception as e:
         print(f"Error extracting book URLs from {category_page_url}: {e}")
         return []
+
+# Write Category CSV files
+def write_category_csv_files(category_name: str, book_list: list[dict], base_dir: str) -> None:
+    """
+    Writes a category-specific CSV file containing only the books that belong to the given category.
+
+    Inputs:
+        category_name (str): The name of the category (e.g., "Science", "Travel").
+        book_list (list[dict]): List of dictionaries representing all books scraped.
+        base_dir (str): Path to the base CSV directory (e.g., 'assets/csv').
+
+    Outputs:
+        - Creates or updates a CSV file at: <base_dir>/categories/<category_name>.csv
+        - Skips existing books already present (by UPC) to avoid duplication.
+        - Logs progress and any errors encountered.
+    """
+    # Step 1: Normalize category name for filename (e.g., 'Science Fiction' -> 'science_fiction')
+    # Step 2: Define the full path for categories directory
+    # Step 3: Create categories directory if it doesn't exist
+    # Step 4: Define the full CSV path for the current category
+    # Step 5: Define column headers (same as book_data.csv)
+    # Step 6: Filter books by category name
+    # Step 7: If no books for this category, log and return
+    # Step 8: Check for existing entries (by UPC) if file exists
+    # Step 9: Filter only new books not already written
+    # Step 10: Open the file in append or write mode
+
+    pass
+

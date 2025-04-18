@@ -175,7 +175,7 @@ def write_book_data_csv(book_info_list: list[dict], file_path:str) -> None:
     if os.path.exists(file_path):
         remove_csv_duplicate_rows(file_path)
 
-    columns = [
+    headers = [
         "product_page_url",
         "universal_product_code",
         "title",
@@ -190,7 +190,7 @@ def write_book_data_csv(book_info_list: list[dict], file_path:str) -> None:
 
     book_info_list = [
         book for book in book_info_list
-        if set(book.values()) != set(columns)
+        if set(book.values()) != set(headers)
     ]
 
     # Detect duplicates from current file

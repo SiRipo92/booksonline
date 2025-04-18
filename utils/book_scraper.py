@@ -166,7 +166,7 @@ def scrape_book(url: str) -> Optional[dict]:
     return book_info
 
 
-def write_csv(book_info_list: list[dict], file_path:str) -> None:
+def write_book_data_csv(book_info_list: list[dict], file_path:str) -> None:
     """
     Input: Takes in a book_info dictionary ( from scrape_book() ) and writes it to a CSV file.
     Output: A CSV file with column headers as keys from book_info dictionary and rows for each book's data

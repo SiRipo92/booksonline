@@ -1,4 +1,4 @@
-from utils.book_scraper import scrape_book, write_csv, download_book_images
+from utils.book_scraper import scrape_book, write_book_data_csv
 from utils.category_scraper import generate_categories_list, scrape_category
 import os
 import csv # to process the csv file
@@ -12,7 +12,12 @@ ASSETS_BASE = "assets/"
 IMAGES_BASE = os.path.join(ASSETS_BASE, "images")
 CSV_BASE = os.path.join(ASSETS_BASE, "csv")
 # Allowed image file extensions to allow for different or possibly changing formats
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".svg"}
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".svg"} # set
+
+### NEED TO WRITE EACH CATEGORY INTO ITS OWN CSV FOLDER/FILE AFTER GENERATING LIST
+### THERE SHOULD BE book_data.csv FOR ALL BOOK DATA
+# AND FOLDERS FOR EACH CATEGORY CONTAINING A {category_name}.csv FILE
+# MIGHT NEED TO DIFFERENTIATE FUNCTIONS FOR WRITING CSV FILES FOR BOOKS AND CATEGORIES ??
 
 def main():
     """
@@ -23,7 +28,7 @@ def main():
         - Each book_data dictionary is collected into a list 'all_books_data'
     Outputs:
         - a filtered list of unique book_data dictionaries to write using book_info["universal_product_code"]
-        - a total number of images downloaded out of total books found
+        - a total number of images dowsnloaded out of total books found
         - a directory of downloaded images
     """
     csv_file_path = os.path.join(CSV_BASE, "book_data.csv")
@@ -59,14 +64,11 @@ def main():
                 else:
                     print(f"Failed to scrape book: {book_url}")
 
-        # Step 4: Add a check to ensure no duplicate entries are scrapped and added
-        unique_books = {book["universal_product_code"]: book for book in all_books_data}
-        unique_books_list = list(unique_books.values())
+        # Step 4: Write the unique_books_list into the csv folder
+        write_book_data_csv(all_books_data, csv_file_path)
+        # Step 5: Write category csv files
 
-        # Step 5: Write the unique_books_list into the csv folder
-        write_csv(unique_books_list, csv_file_path)
-
-        # Step 6: Download images and store them in /assets/images directory
+        # Step 5: Download images and store them in /assets/images directory
         download_book_images_from_csv(csv_file_path)
 
 

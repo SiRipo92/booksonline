@@ -220,7 +220,7 @@ def write_book_data_csv(book_info_list: list[dict], file_path:str) -> None:
     # Append only the new unique entries
     try:
         with open(file_path, "a", newline="", encoding="utf-8") as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=columns) # type: ignore
+            writer = csv.DictWriter(csvfile, fieldnames=headers) # type: ignore
             if csvfile.tell() == 0: # Use function tell() to determine if headers have already been written
                 writer.writeheader()
             writer.writerows(book_info_list)

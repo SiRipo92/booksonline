@@ -133,7 +133,7 @@ def extract_book_urls(category_page_url):
         return []
 
 # Write Category CSV files
-def write_category_csv_files(category_name: str, book_list: list[dict], base_dir: str) -> None:
+def write_category_csv_files(category_name: str, book_list: list[dict], base_dir: str) -> int:
     """
     Writes a category-specific CSV file containing only the books that belong to the given category.
 
@@ -146,18 +146,18 @@ def write_category_csv_files(category_name: str, book_list: list[dict], base_dir
         - Creates or updates a CSV file at: <base_dir>/categories/<category_name>.csv
         - Skips existing books already present (by UPC) to avoid duplication.
         - Logs progress and any errors encountered.
+        - An integer (count of the new books written)
     """
     # Step 1: Normalize category name for filename (e.g., 'Science Fiction' -> 'science_fiction')
     sanitized_category_name = category_name.lower().replace(" ", "_")
 
     # Step 2: Define the full path for categories directory
-    categories_dir = os.path.join(base_dir, sanitized_category_name)
-    abs_categories_dir = os.path.abspath(categories_dir)
+    categories_dir = os.path.join(base_dir, "categories")
 
     # Step 3: Create categories directory if it doesn't exist
     if not os.path.exists(categories_dir):
         os.makedirs(categories_dir)
-        print(f"Created a new directory for {category_name} in {abs_categories_dir}")
+        print(f"\nCreated a categories directory at: {os.path.abspath(categories_dir)}\n")
 
     # Step 4: Define the full CSV path for the current category
     category_csv_path = os.path.join(categories_dir, f"{sanitized_category_name}.csv")
@@ -177,10 +177,47 @@ def write_category_csv_files(category_name: str, book_list: list[dict], base_dir
     ]
 
     # Step 6: Filter books by category name
+    books_in_category = [book for book in book_list if book.get("category") == category_name]
+
     # Step 7: If no books for this category, log and return
-    # Step 8: Check for existing entries (by UPC) if file exists
-    # Step 9: Filter only new books not already written
-    # Step 10: Open the file in append or write mode
+    if not books_in_category:
+        print(f"[{category_name}) No books found for this category. Skipping file creation.")
+        return 0
 
-    pass
+    # Step 8: Load existing UPCs from category file if it exists
+    existing_upcs = set()
+    if os.path.exists(category_csv_path):
+        try:
+            with open(category_csv_path, "r", newline="", encoding="utf-8") as file:
+                reader = csv.DictReader(file)
+                existing_upcs = {
+                    row["universal_product_code"]
+                    for row in reader
+                    if "universal_product_code" in row
+                }
+        except Exception as e:
+            print(f"[ERROR] Failed to read existing category file {category_csv_path}: {e}")
 
+    # Step 9: Filter out any books already in that file
+    new_books = [
+        book for book in books_in_category
+        if book.get("universal_product_code") not in existing_upcs
+    ]
+
+    # Step 10: Append only the new books
+    try:
+        with open(category_csv_path, "a", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(file, fieldnames=headers)
+            if os.stat(category_csv_path).st_size == 0:
+                writer.writeheader()
+
+            if new_books:
+                writer.writerows(new_books)
+                print(f"[SUCCESS] Wrote {len(new_books)} new book(s) to {category_csv_path}")
+                return len(new_books)
+            else:
+                print(f"[NOTICE] Category '{category_name}': File written with headers but no new books found.")
+                return 0
+    except Exception as e:
+        print(f"[ERROR] Failed to write to {category_csv_path}: {e}")
+        return 0

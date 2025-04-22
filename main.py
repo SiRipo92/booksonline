@@ -14,11 +14,6 @@ CSV_BASE = os.path.join(ASSETS_BASE, "csv")
 # Allowed image file extensions to allow for different or possibly changing formats
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".svg"} # set
 
-### NEED TO WRITE EACH CATEGORY INTO ITS OWN CSV FOLDER/FILE AFTER GENERATING LIST
-### THERE SHOULD BE book_data.csv FOR ALL BOOK DATA
-# AND FOLDERS FOR EACH CATEGORY CONTAINING A {category_name}.csv FILE
-# MIGHT NEED TO DIFFERENTIATE FUNCTIONS FOR WRITING CSV FILES FOR BOOKS AND CATEGORIES ??
-
 def main():
     """
     Inputs url for https://books.toscrape.com/ to generate a list of categories
@@ -71,8 +66,23 @@ def main():
         write_book_data_csv(all_books_data, csv_file_path)
         # Step 5: Write category csv files
         print("\nWriting category-specific CSV files...")
-        for category_name in categories:
-            write_category_csv_files(category_name, all_books_data, CSV_BASE)
+        category_names = set(book.get("category") for book in all_books_data if book.get("category"))
+        total_written = 0
+
+        for category_name in category_names:
+            count = write_category_csv_files(category_name, all_books_data, CSV_BASE)
+            total_written += count
+
+        # Final verification
+        expected_total = len(all_books_data)
+        print(f"\nCategory sorting summary: {total_written} books written into category files.")
+        print(f"Total books scraped: {expected_total}")
+        if total_written == expected_total:
+            print("All books have been successfully sorted into their category CSVs.")
+        else:
+            print(
+                f" Warning: {expected_total - total_written} book(s) were not written. "
+                f" Please check for category mismatches or missing data.")
 
         # Step 6: Download images and store them in /assets/images directory
         download_book_images_from_csv(csv_file_path)
@@ -93,9 +103,9 @@ def download_book_images_from_csv(csv_file_path):
     # 2. If the directory doesn't exist, create it using os.makedirs()
     if not os.path.exists(image_dir):
         os.makedirs(image_dir)
-        print(f"Created image directory at: {image_dir}")
+        print(f"\nCreated image directory at: {image_dir}\n")
     else:
-        print("Directory already exists.")
+        print(f"\nImage directory already exists.\n")
 
     # 3. Open the CSV file using csv.DictReader() obtain the image_urls from each row
     try:
@@ -109,7 +119,7 @@ def download_book_images_from_csv(csv_file_path):
                 and os.path.splitext(urlparse(row["image_url"]).path)[1].lower() in ALLOWED_EXTENSIONS
             ]
 
-            print(f"Loaded {len(image_urls)} image URLs from CSV.")
+            print(f"Detected {len(image_urls)} image URLs from CSV.")
             # 4. Count the total number of rows (images to download) and compare to total retreived image_urls
             if not image_urls:
                 print("No image URLs found.")
@@ -125,7 +135,7 @@ def download_book_images_from_csv(csv_file_path):
                 for index, row in enumerate(missing_images, 1):
                     print(f"Missing or unsupported image URL for book entry #{index}: {row.get('title', 'Unknown Title')}")
             else:
-                print("All book entries have image URLs.")
+                print(f"All book entries have image URLs.\n")
 
     except Exception as e:
         print(f"Error reading CSV file: {e}")
@@ -148,6 +158,7 @@ def download_book_images_from_csv(csv_file_path):
         #  Attempt to download image and if failed, store it in failed_downloads list
         try:
             response = requests.get(image_url, stream=True)
+            print(f"\nStarting image downloads...\n")
             # If status_code == 200, open the local file in 'wb' mode, write to file, print progress messsage
             if response.status_code == 200:
                 with open(local_path, "wb") as file:

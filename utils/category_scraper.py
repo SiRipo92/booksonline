@@ -16,7 +16,7 @@ def generate_categories_list(base_url=BASE_URL):
     Inputs:
       - base_url: The base URL for the Books to Scrape site.
     Outputs:
-      - A dictionary where keys are category names (e.g., "Mystery", "Travel")
+      - A list where keys are category names (e.g., "Mystery", "Travel")
         and values are the corresponding absolute URLs for those category pages.
     """
     try:

@@ -1,9 +1,13 @@
+# noinspection DuplicatedCode  # suppress “duplicate code” on the bs4 imports
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import os
 import csv
+import glob
+from typing import List, Dict
 
+# noinspection DuplicatedCode
 BASE_URL = "https://books.toscrape.com/"
 category_page = urljoin(BASE_URL, "catalogue/category/books/mystery_3/index.html")
 
@@ -135,8 +139,6 @@ def extract_book_urls(category_page_url):
 # Write Category CSV files
 def write_category_csv_files(category_name: str, book_list: list[dict], base_dir: str) -> int:
     """
-    Writes a category-specific CSV file containing only the books that belong to the given category.
-
     Inputs:
         category_name (str): The name of the category (e.g., "Science", "Travel").
         book_list (list[dict]): List of dictionaries representing all books scraped.
@@ -221,3 +223,39 @@ def write_category_csv_files(category_name: str, book_list: list[dict], base_dir
     except Exception as e:
         print(f"[ERROR] Failed to write to {category_csv_path}: {e}")
         return 0
+
+# Add a helper function in case book_data.csv fails to write but category files do
+def merge_category_csvs(master_csv: str, base_dir: str) -> None:
+    """
+    Fallback: if master_csv wasn't created or is empty,
+    read every CSV under <base_dir>/categories/*.csv,
+    concatenate their rows, and overwrite master_csv.
+    """
+    categories_dir = os.path.join(base_dir, "categories")
+    pattern = os.path.join(categories_dir, "*.csv")
+    files = glob.glob(pattern)  # find all category CSVs
+    if not files:
+        print("No category CSVs found—cannot build fallback master CSV.")
+        return
+    # merged_rows: List[Dict[str, str]] = []
+    merged_rows: List[Dict[str, str]] = []
+    headers: List[str] | None = None
+
+    # Read each category file
+    for filename in files:
+        with open(filename, newline="", encoding="utf-8") as file:
+            reader = csv.DictReader(file)
+            if headers is None:
+                headers = reader.fieldnames or []
+            merged_rows.extend(reader)
+
+    if not headers:
+        print("Could not determine headers for merged CSV.")
+        return
+
+    # Write the merged master_csv
+    with open(master_csv, "w", newline="", encoding="utf-8") as master_csv:
+        writer = csv.DictWriter(master_csv, fieldnames=headers)
+        writer.writeheader()
+        writer.writerows(merged_rows)
+    print(f"Fallback master CSV generated at {master_csv} from {len(files)} files.")

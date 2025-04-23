@@ -1,5 +1,10 @@
 from utils.book_scraper import scrape_book, write_book_data_csv
-from utils.category_scraper import generate_categories_list, scrape_category, write_category_csv_files
+from utils.category_scraper import (
+    generate_categories_list,
+    scrape_category,
+    write_category_csv_files,
+    merge_category_csvs, # <-- NEW: import fallback helper
+)
 import os
 import csv # to process the csv file
 import requests # to make requests to image_urls for download
@@ -34,6 +39,7 @@ def main():
     # EXTRACTION AND TRANSFORMATION PHASES
     try:
         # Step 1: Create a categories dictionary for category pages to scrape
+        # noinspection DuplicatedCode
         categories = generate_categories_list(BASE_URL)
         if not categories:
             print("No categories found.")
@@ -63,7 +69,14 @@ def main():
 
         ### LOADING PHASE
         # Step 4: Write the unique_books_list into the csv folder
-        write_book_data_csv(all_books_data, csv_file_path)
+        os.makedirs(CSV_BASE, exist_ok=True)  # ensure folder exists
+        try:
+            write_book_data_csv(all_books_data, csv_file_path)
+        except Exception as e:
+            # fallback: if book_data.csv write fails, merge category CSVs instead
+            print(f"Primary CSV write failed: {e}")
+            merge_category_csvs(csv_file_path, CSV_BASE)
+
         # Step 5: Write category csv files
         print("\nWriting category-specific CSV files...")
         category_names = set(book.get("category") for book in all_books_data if book.get("category"))
@@ -72,6 +85,11 @@ def main():
         for category_name in category_names:
             count = write_category_csv_files(category_name, all_books_data, CSV_BASE)
             total_written += count
+
+        # Step 6: If master CSV is still missing or empty, run fallback again
+        if not os.path.exists(csv_file_path) or os.stat(csv_file_path).st_size == 0:
+            print("Master CSV missing or empty—running merge fallback again.")
+            merge_category_csvs(csv_file_path, CSV_BASE)
 
         # Final verification
         expected_total = len(all_books_data)
@@ -84,7 +102,7 @@ def main():
                 f" Warning: {expected_total - total_written} book(s) were not written. "
                 f" Please check for category mismatches or missing data.")
 
-        # Step 6: Download images and store them in /assets/images directory
+        # Step 7: Download images and store them in /assets/images directory
         download_book_images_from_csv(csv_file_path)
 
 
@@ -92,7 +110,8 @@ def main():
         print(f"An error occurred while processing the data: {e}")
 
 ### ETL PROCESS 2 : Function to download images urls once CSV file is written
-def download_book_images_from_csv(csv_file_path):
+# noinspection DuplicatedCode
+def download_book_images_from_csv(csv_file_path: str):
     """
     Inputs the generated csv file, reads it for image_urls to download the book images for each book
     Outputs each downloaded image file as a .jpg file in /assets/images directory
@@ -144,7 +163,7 @@ def download_book_images_from_csv(csv_file_path):
 
     total_images = len(image_urls) # set total_images equal to the length of the image_urls list
     failed_downloads = [] # collect list of failed downloaded urls
-    
+
     # 5. Loop through each row with enumerate():
     for index, image_url in enumerate(image_urls, 1):
         filename = os.path.basename(urlparse(image_url).path) # extract filename from the URL
@@ -172,7 +191,7 @@ def download_book_images_from_csv(csv_file_path):
         except Exception as e:
             print(f"[{index}/{total_images}] Error downloading {image_url}: {e}")
             failed_downloads.append(image_url)
-            
+
     # 6. Manage failed downloads list to reattempt
     if failed_downloads:
         print(f"\nRetrying {len(failed_downloads)} failed downloads...")

@@ -177,7 +177,7 @@ def download_book_images_from_csv(csv_file_path: str):
         #  Attempt to download image and if failed, store it in failed_downloads list
         try:
             response = requests.get(image_url, stream=True)
-            print(f"\nStarting image downloads...\n")
+            print(f"\nStarting image download...")
             # If status_code == 200, open the local file in 'wb' mode, write to file, print progress messsage
             if response.status_code == 200:
                 with open(local_path, "wb") as file:

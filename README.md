@@ -26,7 +26,11 @@ booksonline/
 ├── requirements.txt              # Dépendances Python à installer
 ├── assets/                       # Contient les fichiers générés
 │   ├── csv/                      # CSV exporté contenant les données livres
-│   │   └── book_data.csv
+│   │   └── book_data.csv         # Copie 'master' de toutes les données extraites
+│   │   ├── categories/           # CSVs par catégorie  
+│   │   │   ├── mystery.csv  
+│   │   │   ├── travel.csv  
+│   │   │   └── … 
 │   └── images/                   # Images téléchargées pour chaque livre
 ├── utils/                        # Package utilitaire contenant les fonctions du scraper
 │   ├── __init__.py
